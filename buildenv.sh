@@ -22,7 +22,7 @@ expand_vars()
 {
     local file="${1:--}"
 
-    printf "cat <<EOF\n$(sed 's/\\/\\\\\\\\/g' "${file}")\nEOF" | /bin/bash
+    printf "cat <<EOF\n$(sed 's/\\/\\\\\\\\/g' "${file}")\nEOF" | /bin/bash -u
 }
 
 get_commands()
