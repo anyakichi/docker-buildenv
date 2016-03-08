@@ -42,6 +42,14 @@ get_commands()
     sed -nr -e :a -e '/\\$/N; s/\s*\\\n\s*/ /; ta' -e "${cmd}" "${file}"
 }
 
+print_commands()
+{
+    local options="${1:-0}"
+
+    expand_vars "${BUILDENV_CONF}" \
+      | get_commands - ${options}
+}
+
 do_commands()
 {
     local scmd="${1:-dummy}" yes="${2:-0}" options="${3:-0}"
@@ -114,16 +122,19 @@ main_generic()
     local scmd=$1
     shift
 
-    local xflag=0 yflag=0
+    local pflag=0 xflag=0 yflag=0
 
-    usage="${scmd} [-Hhxy]"
-    while getopts "Hhxy" opt; do
+    usage="${scmd} [-Hhpxy]"
+    while getopts "Hhpxy" opt; do
         case $opt in
             H)
                 usage 0 "${usage}" 0
                 ;;
             h)
                 usage 0 "${usage}"
+                ;;
+            p)
+                pflag=1
                 ;;
             x)
                 xflag=1
@@ -143,15 +154,20 @@ main_generic()
         usage 1 "${usage}"
     fi
 
+    if [[ $pflag -ne 0 ]]; then
+        print_commands $xflag
+        exit 0
+    fi
+
     do_commands "${scmd}" $yflag $xflag
 }
 
 main_extract()
 {
-    local fflag=0 xflag=0 yflag=0
+    local fflag=0 pflag=0 xflag=0 yflag=0
 
-    usage="extract [-Hfhxy]"
-    while getopts "Hfhxy" opt; do
+    usage="extract [-Hfhpxy]"
+    while getopts "Hfhpxy" opt; do
         case $opt in
             H)
                 usage 0 "${usage}" 0
@@ -161,6 +177,9 @@ main_extract()
                 ;;
             h)
                 usage 0 "${usage}"
+                ;;
+            p)
+                pflag=1
                 ;;
             x)
                 xflag=1
@@ -178,6 +197,11 @@ main_extract()
 
     if [[ $# -ne 0 ]]; then
         usage 1 "${usage}"
+    fi
+
+    if [[ $pflag -ne 0 ]]; then
+        print_commands $xflag
+        exit 0
     fi
 
     if [[ $fflag -eq 0 && -n "$(ls -A)" ]]; then
@@ -197,7 +221,7 @@ main()
         usage 1
     fi
 
-    scmd=$1
+    local scmd=$1
     : ${BUILDENV_CONF:=${BUILDENV_CONF_DIR}/${scmd}.txt}
 
     if [[ ${scmd} != init && ! -e ${BUILDENV_CONF} ]]; then
