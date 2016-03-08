@@ -60,7 +60,7 @@ do_commands()
     expand_vars "${BUILDENV_CONF}" \
       | get_commands - ${options} \
       | awk '{ s=$0; gsub(/\\/, "\\\\"); gsub(/"/, "\\\"");
-               print "echo \"==> " $0 "\""; print s " || exit 1" }' \
+               print "echo \"==> " $0 "\" >&2"; print s " || exit 1" }' \
       | /bin/bash
 }
 
