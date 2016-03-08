@@ -35,7 +35,7 @@ get_commands()
         cmd='/^\s*\$\s+/{s//'${prefix}'/p}'
     fi
 
-    sed -nr -e :a -e '/\\$/N; s/\\\n\s*//; ta' -e "${cmd}" "${file}"
+    sed -nr -e :a -e '/\\$/N; s/\s*\\\n\s*/ /; ta' -e "${cmd}" "${file}"
 }
 
 do_commands()
