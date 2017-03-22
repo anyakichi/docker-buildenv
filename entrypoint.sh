@@ -21,8 +21,8 @@ fi
 
 if [ $# -ne 0 ]; then
     if buildenv "$1" -h >/dev/null 2>&1; then
-        exec sudo -EHu ${BUILD_USER} buildenv "$@"
+        exec gosu ${BUILD_USER} buildenv "$@"
     else
-        exec sudo -EHu ${BUILD_USER} "$@"
+        exec gosu ${BUILD_USER} "$@"
     fi
 fi
