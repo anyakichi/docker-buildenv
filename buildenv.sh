@@ -18,10 +18,20 @@ fi
 
 list_scmds()
 {
-    local conf
+    ls "${CONFDIR}" | sed 's/\..*$//' | sort -u
+}
 
-    for conf in "${CONFDIR}"/*.conf; do
-        echo "$(basename ${conf} .conf)"
+get_content_of_scmd()
+{
+    local file newline=""
+
+    for file in "${CONFDIR}/${1}".*; do
+        if [[ -n "${newline}" ]]; then
+            echo
+        else
+            newline="\n"
+        fi
+        cat "${file}"
     done
 }
 
@@ -40,7 +50,7 @@ expand_vars()
 
     cat <<-EOF_OUT | /bin/bash -u
 	cat <<EOF
-	$(echo "${input}" | sed -r 's/\\(\$)|(\\)/\\\1\2/g')
+	$(echo "${input}" | sed -r 's/\\(\$)|(\\|`)/\\\1\2/g')
 	EOF
 	EOF_OUT
 }
@@ -151,7 +161,6 @@ main_generic()
     shift
 
     local force= epat='\$' pronly= yes=
-    local recipe="${CONFDIR}/${scmd}.conf"
 
     if dotcmd_p "${scmd}"; then
         pronly=yes
@@ -160,11 +169,11 @@ main_generic()
     while getopts "Ddfhpxy" opt; do
         case $opt in
             D)
-                cat "${recipe}"
+                get_content_of_scmd "${scmd}"
                 exit 0
                 ;;
             d)
-                cat "${recipe}" | expand_vars
+                get_content_of_scmd "${scmd}" | expand_vars
                 exit 0
                 ;;
             f)
@@ -195,7 +204,7 @@ main_generic()
         usage 1 "${scmd}"
     fi
 
-    commands=$(cat "${recipe}" \
+    commands=$(get_content_of_scmd "${scmd}" \
                 | expand_vars \
                 | select_commands "${epat}")
 
