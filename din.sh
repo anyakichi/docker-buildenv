@@ -12,7 +12,7 @@ din()
         fi
     done
 
-    for i in /etc/localtime /etc/ssl/certs/ca-certificates.crt; do
+    for i in /etc/localtime; do
         if [[ -e "${i}" ]]; then
             opts+=(-v "${i}:${i}:ro")
         fi
