@@ -6,6 +6,16 @@ set -o pipefail
 BUILD_USER="${BUILD_USER:=builder}"
 BUILD_GROUP="${BUILD_GROUP:=builder}"
 
+suexec() {
+    if command -v setpriv >/dev/null 2>&1; then
+        exec setpriv --reuid="$BUILD_USER" --regid="$BUILD_GROUP" --init-groups "$@"
+    elif command -v gosu >/dev/null 2>&1; then
+        exec gosu "$BUILD_USER" "$@"
+    else
+        exec sudo -EHu $BUILD_USER "$@"
+    fi
+}
+
 uid=$(stat -c "%u" .)
 gid=$(stat -c "%g" .)
 
@@ -21,10 +31,11 @@ fi
 
 if [ $# -ne 0 ]; then
     export USER=${BUILD_USER}
+    export HOME=/home/${BUILD_USER}
 
     if buildenv "$1" -h >/dev/null 2>&1; then
-        exec gosu ${BUILD_USER} buildenv "$@"
+        suexec buildenv "$@"
     else
-        exec gosu ${BUILD_USER} "$@"
+        suexec "$@"
     fi
 fi
