@@ -7,10 +7,10 @@ BUILD_USER="${BUILD_USER:=builder}"
 BUILD_GROUP="${BUILD_GROUP:=builder}"
 
 suexec() {
-    if command -v setpriv >/dev/null 2>&1; then
-        exec setpriv --reuid="$BUILD_USER" --regid="$BUILD_GROUP" --init-groups "$@"
-    elif command -v gosu >/dev/null 2>&1; then
+    if command -v gosu >/dev/null 2>&1; then
         exec gosu "$BUILD_USER" "$@"
+    elif command -v setpriv >/dev/null 2>&1; then
+        exec setpriv --reuid="$BUILD_USER" --regid="$BUILD_GROUP" --init-groups "$@"
     else
         exec sudo -EHu $BUILD_USER "$@"
     fi
