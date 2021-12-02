@@ -73,7 +73,7 @@ exec_commands()
     [[ ${1+x} ]] && input="${1}" || input="$(cat -)"
 
     /bin/bash <(echo "${input}" \
-      | awk '{ s=$0; gsub(/\\/, "\\\\"); gsub(/"/, "\\\"");
+      | awk '{ s=$0; gsub(/\\/, "\\\\"); gsub(/"/, "\\\""); gsub(/\$/, "\$");
                print "echo \"==> " $0 "\" >&2"; print s " || exit 1" }')
 }
 
