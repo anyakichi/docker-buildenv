@@ -21,6 +21,7 @@ din()
     if [[ -d "${HOME}/.cache/buildenv" ]]; then
         opts+=(-v "${HOME}/.cache/buildenv:/cache")
         opts+=(-e "CCACHE_DIR=/cache/ccache")
+        opts+=(-e "SCCACHE_DIR=/cache/sccache")
     fi
 
     docker run -it --rm \
