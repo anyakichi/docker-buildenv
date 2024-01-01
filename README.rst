@@ -18,7 +18,7 @@ din is the script included in this repository.  You need to copy it
 to a directory in PATH before using buildenv. ::
 
   $ curl -o ~/.local/bin/din \
-      https://raw.githubusercontent.com/anyakichi/docker-buildenv/master/din.sh
+      https://raw.githubusercontent.com/anyakichi/docker-buildenv/main/din.sh
 
 extract, setup, and build are commands prepared by buildenv.
 
