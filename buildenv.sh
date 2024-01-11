@@ -61,7 +61,7 @@ select_commands()
 
     [[ ${2+x} ]] && input="${2}" || input="$(cat -)"
 
-    cmd='/^\s*('${epat}')\s+/{s///p}'
+    cmd='/^\s*('${epat}')\s+(\S)/{s//\2/p}'
 
     echo "${input}" | sed -nr -e :a -e '/\\$/N; s/\s*\\\n\s*/ /; ta' -e "${cmd}"
 }
