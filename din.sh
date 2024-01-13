@@ -22,6 +22,8 @@ din()
         opts+=(-v "${HOME}/.cache/buildenv:/cache")
         opts+=(-e "CCACHE_DIR=/cache/ccache")
         opts+=(-e "SCCACHE_DIR=/cache/sccache")
+    else
+        opts+=(-e "CCACHE_DISABLE=1")
     fi
 
     docker run -it --rm \
