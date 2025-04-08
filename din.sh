@@ -12,12 +12,6 @@ din()
         fi
     done
 
-    for i in /etc/localtime; do
-        if [[ -e "${i}" ]]; then
-            opts+=(-v "${i}:${i}:ro")
-        fi
-    done
-
     if [[ -d "${HOME}/.cache/buildenv" ]]; then
         opts+=(-v "${HOME}/.cache/buildenv:/cache")
         opts+=(-e "CCACHE_DIR=/cache/ccache")
