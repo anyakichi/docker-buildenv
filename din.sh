@@ -20,7 +20,11 @@ din()
         opts+=(-e "CCACHE_DISABLE=1")
     fi
 
-    docker run -it --rm \
+    if [[ -t 0 ]]; then
+        opts+=(-t)
+    fi
+
+    docker run -i --rm \
         -v "$(pwd):${workdir}" \
         -w "${workdir}" \
         -h "$(basename "$(pwd)")" \
