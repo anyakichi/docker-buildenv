@@ -1,10 +1,15 @@
 #!/bin/bash
 
-din()
-{
+din() {
     local workdir=/build
     local i opts
-    opts=()
+    opts=(
+        -i --rm
+        -v "$PWD:${workdir}"
+        -w "${workdir}"
+        -h "$(basename "$PWD")"
+        -e BASH_ENV="${workdir}/.bashrc"
+    )
 
     for i in TERM http_proxy https_proxy ftp_proxy no_proxy; do
         if [[ "${!i}" ]]; then
@@ -24,13 +29,13 @@ din()
         opts+=(-t)
     fi
 
-    docker run -i --rm \
-        -v "$(pwd):${workdir}" \
-        -w "${workdir}" \
-        -h "$(basename "$(pwd)")" \
-        -e BASH_ENV="${workdir}/.bashrc" \
-        "${opts[@]}" \
-        "$@"
+    if [[ $DIN_CMD == podman ]]; then
+        podman run \
+            --user 0:0 --userns "keep-id:uid=$(id -u),gid=$(id -g)" \
+            "${opts[@]}" "$@"
+    else
+        docker run "${opts[@]}" "$@"
+    fi
 }
 
 din "$@"
