@@ -29,6 +29,14 @@ din() {
         opts+=(-t)
     fi
 
+    if [[ -z $DIN_CMD ]]; then
+        if command -v docker >/dev/null 2>&1; then
+            DIN_CMD=docker
+        elif command -v podman >/dev/null 2>&1; then
+            DIN_CMD=podman
+        fi
+    fi
+
     if [[ $DIN_CMD == podman ]]; then
         podman run \
             --user 0:0 --userns "keep-id:uid=$(id -u),gid=$(id -g)" \
