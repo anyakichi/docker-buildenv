@@ -57,11 +57,22 @@ dotcmd_p()
 #     {% elif EXPR %} ->  elif [[ EXPR ]]; then
 #     {% else %}      ->  else
 #     {% endif %}     ->  fi
+#     {% include X %} ->  "${__BUILDENV__}" "X" -d
 #
 # A directive leaves nothing behind, hence it can be put anywhere, even in the
 # middle of the continuation lines of a command.
+#
+# An inclusion is a command of the script, so that the name of the document is
+# expanded by the shell as everything else is, and buildenv itself expands the
+# included document in turn.  Only an inclusion counts up the depth, which
+# guards against a document that includes itself.
 expand_vars()
 {
+    if [[ ${__BUILDENV_DEPTH__:-0} -gt 16 ]]; then
+        echo "buildenv: inclusion is too deep" >&2
+        exit 1
+    fi
+
     awk '
 	# Escape a line so that the here-document expands the variables and the
 	# command substitutions in it, and nothing else.
@@ -116,6 +127,12 @@ expand_vars()
 	        print "else"
 	    } else if (d == "endif") {
 	        print "fi"
+	    } else if (sub(/^include[ \t]+/, "", d)) {
+	        print "__include__=\"" d "\""
+	        print "__BUILDENV_DEPTH__=$(( ${__BUILDENV_DEPTH__:-0} + 1 ))" \
+	              " \"${__BUILDENV__}\" \"${__include__}\" -d ||" \
+	              " { echo \"buildenv: cannot include ${__include__}\" >&2;" \
+	              " exit 1; }"
 	    } else {
 	        print "buildenv: unknown directive: " $0 | "cat >&2"
 	        err = 1
@@ -132,7 +149,7 @@ expand_vars()
 	        text_off()
 	    }
 	}
-    ' | /bin/bash -u
+    ' | __BUILDENV__="$0" /bin/bash -u
 }
 
 # Extract command lines from a document.  Each command line is prefixed with
