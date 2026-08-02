@@ -87,6 +87,69 @@ The extract command just filter the lines starts with prompt ($) from
 extract.txt and simply execute it. So you can execute the manual if it
 is put in the container.
 
+### Multi-line commands
+
+A command can span multiple lines. The lines that follow a command
+line and start with "> " are its continuation lines; the text after the
+"> " is taken as is. It is typically used to write a file with a
+here-document:
+
+```
+$ cat > conf/site.conf <<'EOF'
+> MACHINE = "${MY_MACHINE}"
+>
+> DL_DIR = "\${TOPDIR}/downloads"
+> EOF
+```
+
+Anything the shell accepts works, not only here-documents:
+
+```
+$ for f in conf/*.sample; do
+>     cp "\$f" "\${f%.sample}"
+> done
+```
+
+The rules are:
+
+- The ">" must stand in the column of the prompt it continues. A line
+  indented more deeply is never a continuation line, so a command
+  wrapped with backslashes is left to the shell as before, even if its
+  lines start with a redirection or a pipe:
+
+  ```
+  $ printf '%s\n' one two three \
+    | sort \
+    > sorted.txt
+  ```
+
+- The mark is "> ", a greater-than sign and a space, just as the prompt
+  is "$ ", so that a command is written as it is shown. The space is
+  required: a line that begins with ">" but not with "> " is text, not
+  a continuation line. The text right after the mark is used as is, so
+  write an empty line as a line with only ">", and a line that itself
+  starts with ">" as "> >...".
+- A line is a continuation line only when it follows a command line or
+  another continuation line, so a quote in the text is left alone.
+
+buildenv expands variables in a document before the commands are
+executed, in continuation lines too, and regardless of whether a
+here-document delimiter is quoted. So ${MY_MACHINE} above is replaced
+with the value in the container by buildenv. Escape a variable as
+\${VAR} to leave it for the executed commands; then the ordinary shell
+rules apply, that is, it is expanded on execution with an unquoted
+delimiter and written to the file as is with a quoted one.
+
+Note that the commands are executed with errexit enabled, so the
+execution stops on the first command that fails, including one inside
+a loop.
+
+The prompts and the continuation marks are the notation of buildenv,
+not of the shell, so `buildenv <command> -m` prints the document as a
+manual with them removed, leaving the commands ready to be copied out
+of the text. `-d` keeps them and prints the document as it is written
+with the variables expanded.
+
 ## Examples
 
 - <https://github.com/anyakichi/docker-yocto-builder>
