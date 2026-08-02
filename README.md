@@ -150,6 +150,47 @@ manual with them removed, leaving the commands ready to be copied out
 of the text. `-d` keeps them and prints the document as it is written
 with the variables expanded.
 
+### Conditions
+
+A part of a document can be left out with a directive, which is a line
+of its own and leaves nothing behind:
+
+```
+{% if "${CROSS_IMAGE}" %}
+Extract the rootfs of ${CROSS_IMAGE} to build against it.
+
+$ podman export \$id | tar -xf - -C sysroot
+{% else %}
+Nothing to extract; the build is native.
+{% endif %}
+```
+
+`{% if %}`, `{% elif %}`, `{% else %}` and `{% endif %}` are available,
+and they can be nested. The expression is passed to the test command of
+the shell as it is written, so anything `[[ ]]` accepts works:
+
+```
+{% if "${CROSS_IMAGE}" == alpine* %}
+{% if -z "${CROSS_CONTAINER:-}" %}
+{% if $(distro) == debian %}
+```
+
+Since a directive leaves nothing behind, it can be put anywhere, even
+between the continuation lines of a command:
+
+```
+$ cat > conf/auto.conf <<EOF
+> MACHINE = "${MY_MACHINE}"
+{% if "${MY_CCACHE_DIR}" %}
+> INHERIT += "ccache"
+{% endif %}
+> EOF
+```
+
+Directives are resolved along with the variables, so every output but
+`-D`, which prints a document as it is stored, is free of them. A line
+that looks like a directive but is not one of the above is an error.
+
 ## Examples
 
 - <https://github.com/anyakichi/docker-yocto-builder>
