@@ -228,15 +228,72 @@ select_commands()
     '
 }
 
+# The prompt of the interactive mode.  It is put in the generated script, since
+# the commands share the state of one shell and cannot be run one by one.
+#
+# The answer is read from the terminal, not from the standard input, so that a
+# command that reads the standard input does not eat it.  Where there is no
+# terminal, the standard input is used after all, and the end of it quits.
+ask_func()
+{
+    cat <<'__BUILDENV_ASK__'
+__buildenv_tty=/dev/stdin
+
+if { : < /dev/tty; } 2>/dev/null; then
+    __buildenv_tty=/dev/tty
+fi
+
+__buildenv_ask()
+{
+    local reply
+
+    if [[ ${__buildenv_all:-} ]]; then
+        printf '==> %s\n' "${1%%$'\n'*}" >&2
+        return 0
+    fi
+
+    printf '%s\n' "$1" | sed -e '1s/^/  $ /' -e '1!s/^/  > /' >&2
+
+    while :; do
+        read -r -p 'Execute? [Y/n/a/q/?] ' reply < "${__buildenv_tty}" || reply=q
+
+        case ${reply:-y} in
+            [Yy])
+                return 0
+                ;;
+            [Nn])
+                return 1
+                ;;
+            [Aa])
+                __buildenv_all=yes
+                return 0
+                ;;
+            [Qq])
+                exit 0
+                ;;
+            *)
+                echo "y: execute, n: skip, a: execute the rest, q: quit" >&2
+                ;;
+        esac
+    done
+}
+__BUILDENV_ASK__
+}
+
 # Execute commands.  Errors are propagated by errexit rather than by appending
 # "|| exit 1" to each command, because a command may span multiple lines.
+#
+# If the second argument is given, ask before each command.  A command is then
+# wrapped in an if, whose condition is out of the reach of errexit, so that an
+# unwanted command is skipped while a failing one still stops the execution.
 exec_commands()
 {
-    local input
+    local input ask="${2:-}"
 
     [[ ${1+x} ]] && input="${1}" || input="$(cat -)"
 
-    /bin/bash <(echo "${input}" | MARK="${MARK}" awk '
+    /bin/bash <(echo "${input}" \
+      | MARK="${MARK}" ASK="${ask}" ASK_FUNC="$(ask_func)" awk '
 	function shquote(s,   n, arr, i, r) {
 	    n = split(s, arr, q)
 	    r = arr[1]
@@ -245,18 +302,48 @@ exec_commands()
 	    }
 	    return q r q
 	}
+	# A command is held until the next one, to show it whole in the prompt.
+	function flush(   i, s) {
+	    if (nheld == 0) {
+	        return
+	    }
+
+	    if (ask) {
+	        s = held[1]
+	        for (i = 2; i <= nheld; i++) {
+	            s = s "\n" held[i]
+	        }
+	        print "if __buildenv_ask " shquote(s) "; then"
+	    } else {
+	        print "echo " shquote("==> " held[1]) " >&2"
+	    }
+
+	    for (i = 1; i <= nheld; i++) {
+	        print held[i]
+	    }
+
+	    if (ask) {
+	        print "fi"
+	    }
+
+	    nheld = 0
+	}
 	BEGIN {
 	    q = sprintf("%c", 39)
 	    mark = ENVIRON["MARK"]
+	    ask = ENVIRON["ASK"]
 	    print "set -o errexit"
+	    if (ask) {
+	        print ENVIRON["ASK_FUNC"]
+	    }
 	}
 	substr($0, 1, 1) == mark {
-	    s = substr($0, 2)
-	    print "echo " shquote("==> " s) " >&2"
-	    print s
+	    flush()
+	    held[++nheld] = substr($0, 2)
 	    next
 	}
-	{ print }    # continuation line
+	{ held[++nheld] = $0 }    # continuation line
+	END { flush() }
     ')
 }
 
@@ -338,10 +425,10 @@ usage()
     else
         case "${scmd}" in
             extract)
-                echo "usage: ${cmd} ${scmd} [-Ddfhmpxy]"
+                echo "usage: ${cmd} ${scmd} [-Ddfhimpxy]"
                 ;;
             *)
-                echo "usage: ${cmd} ${scmd} [-Ddhmpxy]"
+                echo "usage: ${cmd} ${scmd} [-Ddhimpxy]"
                 ;;
         esac
     fi
@@ -393,13 +480,13 @@ main_generic()
     local scmd=$1
     shift
 
-    local force='' epat='\$' pronly='' yes=''
+    local force='' epat='\$' interactive='' pronly='' yes=''
 
     if dotcmd_p "${scmd}"; then
         pronly=yes
     fi
 
-    while getopts "Ddfhmpxy" opt; do
+    while getopts "Ddfhimpxy" opt; do
         case $opt in
             D)
                 get_content_of_scmd "${scmd}"
@@ -415,6 +502,9 @@ main_generic()
                 ;;
             h)
                 usage 0 "${scmd}"
+                ;;
+            i)
+                interactive=yes
                 ;;
             m)
                 get_content_of_scmd "${scmd}" | expand_vars | print_manual
@@ -462,7 +552,9 @@ main_generic()
         fi
     fi
 
-    if [[ ${yes} ]]; then
+    if [[ ${interactive} ]]; then
+        exec_commands "${commands}" ask
+    elif [[ ${yes} ]]; then
         exec_commands "${commands}"
     else
         ask_exec_commands "${scmd}" "${commands}"
