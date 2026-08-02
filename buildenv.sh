@@ -48,10 +48,11 @@ expand_vars()
 
     input="$(cat -)"
 
+    # The delimiter must be a string that never appears in the documents.
     cat <<-EOF_OUT | /bin/bash -u
-	cat <<EOF
+	cat <<__BUILDENV_EXPAND_EOF__
 	$(echo "${input}" | sed -r 's/\\(\$)|(\\|`)/\\\1\2/g')
-	EOF
+	__BUILDENV_EXPAND_EOF__
 	EOF_OUT
 }
 
