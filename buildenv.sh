@@ -46,18 +46,93 @@ dotcmd_p()
     [[ ${DOTCMDS} =~ ${pat} ]]
 }
 
+# Expand the variables in a document and resolve its directives.  The document
+# is compiled into a shell script that prints it, so that a directive becomes
+# the control flow of the script:
+#
+#     text            ->  cat <<__BUILDENV_EXPAND_EOF__
+#                         text
+#                         __BUILDENV_EXPAND_EOF__
+#     {% if EXPR %}   ->  if [[ EXPR ]]; then
+#     {% elif EXPR %} ->  elif [[ EXPR ]]; then
+#     {% else %}      ->  else
+#     {% endif %}     ->  fi
+#
+# A directive leaves nothing behind, hence it can be put anywhere, even in the
+# middle of the continuation lines of a command.
 expand_vars()
 {
-    local input
+    awk '
+	# Escape a line so that the here-document expands the variables and the
+	# command substitutions in it, and nothing else.
+	function esc(s,   i, c, n, r) {
+	    r = ""
+	    n = length(s)
+	    for (i = 1; i <= n; i++) {
+	        c = substr(s, i, 1)
+	        if (c == "\\") {
+	            if (substr(s, i + 1, 1) == "$") {
+	                r = r "\\$"    # leave the dollar for the commands
+	                i++
+	            } else {
+	                r = r "\\\\"
+	            }
+	        } else if (c == "`") {
+	            r = r "\\`"
+	        } else {
+	            r = r c
+	        }
+	    }
+	    return r
+	}
+	function text_on() {
+	    if (!text) {
+	        print "cat <<" delim
+	        text = 1
+	    }
+	}
+	function text_off() {
+	    if (text) {
+	        print delim
+	        text = 0
+	    }
+	}
+	BEGIN {
+	    # The delimiter must be a string that never appears in a document.
+	    delim = "__BUILDENV_EXPAND_EOF__"
+	}
+	/^[ \t]*\{%.*%\}[ \t]*$/ {
+	    d = $0
+	    sub(/^[ \t]*\{%[ \t]*/, "", d)
+	    sub(/[ \t]*%\}[ \t]*$/, "", d)
 
-    input="$(cat -)"
+	    text_off()
 
-    # The delimiter must be a string that never appears in the documents.
-    cat <<-EOF_OUT | /bin/bash -u
-	cat <<__BUILDENV_EXPAND_EOF__
-	$(echo "${input}" | sed -r 's/\\(\$)|(\\|`)/\\\1\2/g')
-	__BUILDENV_EXPAND_EOF__
-	EOF_OUT
+	    if (sub(/^if[ \t]+/, "", d)) {
+	        print "if [[ " d " ]]; then"
+	    } else if (sub(/^elif[ \t]+/, "", d)) {
+	        print "elif [[ " d " ]]; then"
+	    } else if (d == "else") {
+	        print "else"
+	    } else if (d == "endif") {
+	        print "fi"
+	    } else {
+	        print "buildenv: unknown directive: " $0 | "cat >&2"
+	        err = 1
+	        exit 1
+	    }
+	    next
+	}
+	{
+	    text_on()
+	    print esc($0)
+	}
+	END {
+	    if (!err) {
+	        text_off()
+	    }
+	}
+    ' | /bin/bash -u
 }
 
 # Extract command lines from a document.  Each command line is prefixed with
