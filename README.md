@@ -28,6 +28,24 @@ extract, setup, and build are commands prepared by buildenv.
 - **setup**: Setup build environment.
 - **build**: Build software.
 
+A command shows what it is about to do and asks once, then runs it all.
+With -i it asks for every command instead, so that you can follow the
+manual step by step:
+
+```console
+builder@build:/build$ setup -i
+  $ cat > conf/auto.conf <<EOF
+  > MACHINE = "qemux86-64"
+  > EOF
+Execute? [Y/n/a/q/?] y
+  $ bitbake core-image-minimal
+Execute? [Y/n/a/q/?] a
+```
+
+y executes the command, n skips it, a executes it and all that follow
+without asking again, and q stops there. The commands share one shell,
+so a command still sees what the commands before it have done.
+
 Normally, extract is required only once, so you can use the container
 after the second:
 
