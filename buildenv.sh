@@ -57,7 +57,7 @@ expand_vars()
 
 select_commands()
 {
-    local epat="${1:-\$}" input
+    local epat=${1:-'\$'} input
 
     [[ ${2+x} ]] && input="${2}" || input="$(cat -)"
 
