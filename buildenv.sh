@@ -174,6 +174,48 @@ print_commands()
     sed -e "s/^${MARK}/  \$ /" -e t -e "s/^/  > /"
 }
 
+# Print a document as a manual.  The prompts and the continuation marks are
+# removed, so that a command can be copied out of the text as it is; everything
+# else is left as it is written.  A line is a continuation line here as well
+# only when its ">" stands in the column of the prompt above, so that a quote
+# in the text is left alone.
+print_manual()
+{
+    EPAT='\$|\?' awk '
+	function cont_p(s) {
+	    return open && tlen > 0 && substr(s, 1, tlen) == tstr &&
+	           (length(s) == tlen || substr(s, tlen + 1, 1) == " ")
+	}
+	BEGIN {
+	    cpat = "^[ \t]*(" ENVIRON["EPAT"] ")[ \t]+[^ \t]"
+	    ppat = "^[ \t]*(" ENVIRON["EPAT"] ")[ \t]+"
+	}
+	{
+	    if (cont_p($0)) {
+	        print ind substr($0, tlen + 2)
+	        next
+	    }
+
+	    line = $0
+
+	    if ($0 ~ cpat) {
+	        ind = $0
+	        sub(/[^ \t].*$/, "", ind)    # the indentation of the prompt
+	        tstr = ind ">"
+	        tlen = length(tstr)
+	        open = 1
+	        sub(ppat, "", line)    # drop the indentation and the prompt
+	        line = ind line
+	    } else if (!(open && prev ~ /\\$/)) {
+	        open = 0    # a trailing backslash keeps the command open
+	    }
+
+	    prev = $0
+	    print line
+	}
+    '
+}
+
 ask_exec_commands()
 {
     local scmd="${1:-dummy}" input="${2:-}"
@@ -204,10 +246,10 @@ usage()
     else
         case "${scmd}" in
             extract)
-                echo "usage: ${cmd} ${scmd} [-Ddfhpxy]"
+                echo "usage: ${cmd} ${scmd} [-Ddfhmpxy]"
                 ;;
             *)
-                echo "usage: ${cmd} ${scmd} [-Ddhpxy]"
+                echo "usage: ${cmd} ${scmd} [-Ddhmpxy]"
                 ;;
         esac
     fi
@@ -265,7 +307,7 @@ main_generic()
         pronly=yes
     fi
 
-    while getopts "Ddfhpxy" opt; do
+    while getopts "Ddfhmpxy" opt; do
         case $opt in
             D)
                 get_content_of_scmd "${scmd}"
@@ -281,6 +323,10 @@ main_generic()
                 ;;
             h)
                 usage 0 "${scmd}"
+                ;;
+            m)
+                get_content_of_scmd "${scmd}" | expand_vars | print_manual
+                exit 0
                 ;;
             p)
                 pronly=yes
