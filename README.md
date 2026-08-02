@@ -191,6 +191,35 @@ Directives are resolved along with the variables, so every output but
 `-D`, which prints a document as it is stored, is free of them. A line
 that looks like a directive but is not one of the above is an error.
 
+### Inclusion
+
+A document can be included in another one:
+
+```
+{% include extract-sysroot-$(distro) %}
+```
+
+The name is expanded by the shell as everything else is, so it can be
+chosen by a command or a variable. What is included is the document
+expanded to the end, that is, its own variables, directives and
+inclusions are all resolved before it is put in place. Every document
+is therefore a unit of its own: an `{% if %}` cannot be closed by an
+`{% endif %}` of another document.
+
+Lines are what is included, so an included document can even continue
+a command of the document that includes it:
+
+```
+$ cat > conf/auto.conf <<EOF
+> MACHINE = "${MY_MACHINE}"
+{% include auto-conf-extra %}
+> EOF
+```
+
+A document that cannot be included, because there is no such document
+or because it has an error in it, stops the whole command. So does a
+document that includes itself, after a few rounds.
+
 ## Examples
 
 - <https://github.com/anyakichi/docker-yocto-builder>
