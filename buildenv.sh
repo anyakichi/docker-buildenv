@@ -273,7 +273,9 @@ select_commands()
 #
 # The answer is read from the terminal, not from the standard input, so that a
 # command that reads the standard input does not eat it.  Where there is no
-# terminal, the standard input is used after all, and the end of it quits.
+# terminal, the standard input is used after all, and the end of it is an error,
+# not a quit, since the commands left unanswered are the ones left unexecuted:
+# a run that answers nothing must not look like a run that succeeded.
 ask_func()
 {
     cat <<'__BUILDENV_ASK__'
@@ -295,7 +297,12 @@ __buildenv_ask()
     printf '%s\n' "$1" | sed -e '1s/^/  $ /' -e '1!s/^/  > /' >&2
 
     while :; do
-        read -r -p 'Execute? [Y/n/a/q/?] ' reply < "${__buildenv_tty}" || reply=q
+        if ! read -r -p 'Execute? [Y/n/a/q/?] ' reply < "${__buildenv_tty}" \
+           && [[ ! ${reply:-} ]]; then
+            echo >&2
+            echo "buildenv: no answer to read; the input has ended" >&2
+            exit 1
+        fi
 
         case ${reply:-y} in
             [Yy])
