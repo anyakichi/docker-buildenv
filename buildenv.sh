@@ -6,7 +6,6 @@ set -o pipefail
 
 shopt -s nullglob
 
-
 if [[ -r /etc/buildenv.conf ]]; then
     . /etc/buildenv.conf
 fi
@@ -19,18 +18,15 @@ CONFDIR=${CONFDIR:=/etc/buildenv.d}
 # of select_commands.
 MARK=$'\001'
 
-
-list_scmds()
-{
+list_scmds() {
     ls "${CONFDIR}" | sed 's/\..*$//' | sort -u
 }
 
-get_content_of_scmd()
-{
+get_content_of_scmd() {
     local file newline=""
 
     for file in "${CONFDIR}/${1}".*; do
-        if [[ -n "${newline}" ]]; then
+        if [[ -n ${newline} ]]; then
             echo
         else
             newline="\n"
@@ -39,8 +35,7 @@ get_content_of_scmd()
     done
 }
 
-dotcmd_p()
-{
+dotcmd_p() {
     local pat="\\<$1\\>"
 
     [[ ${DOTCMDS} =~ ${pat} ]]
@@ -72,8 +67,7 @@ dotcmd_p()
 # expanded by the shell as everything else is, and buildenv itself expands the
 # included document in turn.  Only an inclusion counts up the depth, which
 # guards against a document that includes itself.
-expand_vars()
-{
+expand_vars() {
     if [[ ${__BUILDENV_DEPTH__:-0} -gt 16 ]]; then
         echo "buildenv: inclusion is too deep" >&2
         exit 1
@@ -207,8 +201,7 @@ expand_vars()
 # takes precedence over a trailing backslash.  A "> " line is held just as a
 # command line is, so that it too joins the deeper-indented line that follows
 # its trailing backslash instead of losing it.
-select_commands()
-{
+select_commands() {
     local epat=${1:-'\$'} input
 
     [[ ${2+x} ]] && input="${2}" || input="$(cat -)"
@@ -277,8 +270,7 @@ select_commands()
 # terminal, the standard input is used after all, and the end of it is an error,
 # not a quit, since the commands left unanswered are the ones left unexecuted:
 # a run that answers nothing must not look like a run that succeeded.
-ask_func()
-{
+ask_func() {
     cat <<'__BUILDENV_ASK__'
 __buildenv_tty=/dev/stdin
 
@@ -334,14 +326,13 @@ __BUILDENV_ASK__
 # If the second argument is given, ask before each command.  A command is then
 # wrapped in an if, whose condition is out of the reach of errexit, so that an
 # unwanted command is skipped while a failing one still stops the execution.
-exec_commands()
-{
+exec_commands() {
     local input ask="${2:-}"
 
     [[ ${1+x} ]] && input="${1}" || input="$(cat -)"
 
-    /bin/bash <(echo "${input}" \
-      | MARK="${MARK}" ASK="${ask}" ASK_FUNC="$(ask_func)" awk '
+    /bin/bash <(echo "${input}" |
+        MARK="${MARK}" ASK="${ask}" ASK_FUNC="$(ask_func)" awk '
 	function shquote(s,   n, arr, i, r) {
 	    n = split(s, arr, q)
 	    r = arr[1]
@@ -396,8 +387,7 @@ exec_commands()
 }
 
 # Print commands as they are written in a document, with prompts.
-print_commands()
-{
+print_commands() {
     sed -e "s/^${MARK}/  \$ /" -e t -e "s/^/  > /"
 }
 
@@ -406,8 +396,7 @@ print_commands()
 # else is left as it is written.  A line is a continuation line here as well
 # only when its ">" stands in the column of the prompt above, so that a quote
 # in the text is left alone.
-print_manual()
-{
+print_manual() {
     EPAT='\$|\?' awk '
 	function cont_p(s) {
 	    return open && tlen > 0 && substr(s, 1, tlen) == tstr &&
@@ -444,8 +433,7 @@ print_manual()
     '
 }
 
-ask_exec_commands()
-{
+ask_exec_commands() {
     local scmd="${1:-dummy}" input="${2:-}"
 
     echo "${scmd^} commands:"
@@ -459,8 +447,7 @@ ask_exec_commands()
     fi
 }
 
-usage()
-{
+usage() {
     local status=${1:-1} scmd=${2:-}
     local cmd
 
@@ -473,26 +460,24 @@ usage()
         done
     else
         case "${scmd}" in
-            extract)
-                echo "usage: ${cmd} ${scmd} [-Ddfhimpxy]"
-                ;;
-            *)
-                echo "usage: ${cmd} ${scmd} [-Ddhimpxy]"
-                ;;
+        extract)
+            echo "usage: ${cmd} ${scmd} [-Ddfhimpxy]"
+            ;;
+        *)
+            echo "usage: ${cmd} ${scmd} [-Ddhimpxy]"
+            ;;
         esac
     fi
 
     exit "${status}"
 }
 
-print_alias()
-{
+print_alias() {
     local scmd="$1" type="${2:-}" pat="\\<${1}\\>"
 
-    if [[ ${ALIASES} == 1 ]] || \
-       ([[ ${ALIASES} == 2 ]] && ! type "${scmd}" >/dev/null 2>&1) || \
-       [[ ${ALIASES} =~ ${pat} ]];
-    then
+    if [[ ${ALIASES} == 1 ]] ||
+        ([[ ${ALIASES} == 2 ]] && ! type "${scmd}" >/dev/null 2>&1) ||
+        [[ ${ALIASES} =~ ${pat} ]]; then
         if [[ ${type} == "source" ]]; then
             echo "alias ${scmd}='. <(${cmd} ${scmd})'"
         else
@@ -501,8 +486,7 @@ print_alias()
     fi
 }
 
-main_init()
-{
+main_init() {
     local cmd scmd
 
     cmd="$(basename "$0")"
@@ -524,8 +508,7 @@ main_init()
     done
 }
 
-main_generic()
-{
+main_generic() {
     local scmd=$1
     shift
 
@@ -537,40 +520,40 @@ main_generic()
 
     while getopts "Ddfhimpxy" opt; do
         case $opt in
-            D)
-                get_content_of_scmd "${scmd}"
-                exit 0
-                ;;
-            d)
-                get_content_of_scmd "${scmd}" | expand_vars
-                exit 0
-                ;;
-            f)
-                [[ ${scmd} != extract ]] && usage 1 "${scmd}"
-                force=yes
-                ;;
-            h)
-                usage 0 "${scmd}"
-                ;;
-            i)
-                interactive=yes
-                ;;
-            m)
-                get_content_of_scmd "${scmd}" | expand_vars | print_manual
-                exit 0
-                ;;
-            p)
-                pronly=yes
-                ;;
-            x)
-                epat='\$|\?'
-                ;;
-            y)
-                yes=yes
-                ;;
-            \?)
-                usage 1 "${scmd}"
-                ;;
+        D)
+            get_content_of_scmd "${scmd}"
+            exit 0
+            ;;
+        d)
+            get_content_of_scmd "${scmd}" | expand_vars
+            exit 0
+            ;;
+        f)
+            [[ ${scmd} != extract ]] && usage 1 "${scmd}"
+            force=yes
+            ;;
+        h)
+            usage 0 "${scmd}"
+            ;;
+        i)
+            interactive=yes
+            ;;
+        m)
+            get_content_of_scmd "${scmd}" | expand_vars | print_manual
+            exit 0
+            ;;
+        p)
+            pronly=yes
+            ;;
+        x)
+            epat='\$|\?'
+            ;;
+        y)
+            yes=yes
+            ;;
+        \?)
+            usage 1 "${scmd}"
+            ;;
         esac
     done
 
@@ -580,11 +563,11 @@ main_generic()
         usage 1 "${scmd}"
     fi
 
-    commands=$(get_content_of_scmd "${scmd}" \
-                | expand_vars \
-                | select_commands "${epat}")
+    commands=$(get_content_of_scmd "${scmd}" |
+        expand_vars |
+        select_commands "${epat}")
 
-    if [[ -z "${commands}" ]]; then
+    if [[ -z ${commands} ]]; then
         exit 0
     fi
 
@@ -610,8 +593,7 @@ main_generic()
     fi
 }
 
-main()
-{
+main() {
     if [[ $# -eq 0 ]]; then
         usage 1
     fi

@@ -30,28 +30,24 @@ input=''
 out=''
 status=0
 
-
 # Write a document, read from the standard input, into a fresh CONFDIR.  The
 # argument is the stem of the file, hence the name of the command, and
 # defaults to "build".
-doc()
-{
+doc() {
     confdir="$(mktemp -d "${tmpdir}/conf.XXXXXX")"
     workdir="$(mktemp -d "${tmpdir}/work.XXXXXX")"
-    cat > "${confdir}/${1:-build}.txt"
+    cat >"${confdir}/${1:-build}.txt"
 }
 
 # Write another document into the CONFDIR of the last doc, so that inclusion
 # and commands made of several files can be tested.
-doc_add()
-{
-    cat > "${confdir}/${1}.txt"
+doc_add() {
+    cat >"${confdir}/${1}.txt"
 }
 
 # Set the answers of the interactive mode, one per argument, for the next run.
 # Without an argument the input is empty, which is the end of it at once.
-answer()
-{
+answer() {
     local a
 
     input=''
@@ -61,16 +57,14 @@ answer()
 }
 
 # Run buildenv over the last document.
-run()
-{
-    out="$(cd "${workdir}" && printf '%s' "${input}" \
-           | CONFDIR="${confdir}" "${BUILDENV}" "$@" 2>&1)"
+run() {
+    out="$(cd "${workdir}" && printf '%s' "${input}" |
+        CONFDIR="${confdir}" "${BUILDENV}" "$@" 2>&1)"
     status=$?
     input=''
 }
 
-fail()
-{
+fail() {
     nfailures=$((nfailures + 1))
     printf 'FAIL %d - %s\n' "${ntests}" "$1"
 }
@@ -78,8 +72,7 @@ fail()
 # Compare the last run with the status given and the output read from the
 # standard input.  The trailing newlines are dropped from both sides, since
 # the substitution that captures the output drops them anyway.
-check()
-{
+check() {
     local name="$1" want_status="$2" want
 
     want="$(cat)"
@@ -96,14 +89,13 @@ check()
     fi
     if [[ ${out} != "${want}" ]]; then
         printf '  --- want ---\n%s\n  --- got ---\n%s\n  ---\n' \
-               "${want}" "${out}"
+            "${want}" "${out}"
     fi
 }
 
 # Compare the last run with the status given and a substring of the output,
 # for the diagnostics whose wording is not ours to fix.
-check_has()
-{
+check_has() {
     local name="$1" want_status="$2" want="$3"
 
     ntests=$((ntests + 1))
@@ -116,9 +108,8 @@ check_has()
     fail "${name}"
     printf '  status %s, want %s\n' "${status}" "${want_status}"
     printf '  --- want substring ---\n%s\n  --- got ---\n%s\n  ---\n' \
-           "${want}" "${out}"
+        "${want}" "${out}"
 }
-
 
 #
 # Selecting the commands
@@ -250,7 +241,6 @@ echo optional
 cont
 EOF
 
-
 #
 # Printing the manual
 #
@@ -302,7 +292,6 @@ run build -m
 check 'the manual leaves a ">" in the text alone' 0 <<'EOF'
 The > in this line is text, not a continuation.
 EOF
-
 
 #
 # Expanding the variables
@@ -451,14 +440,14 @@ doc <<'EOF'
 EOF
 run build -d
 check_has 'an include of a missing document fails' 1 \
-          'buildenv: cannot include nosuch'
+    'buildenv: cannot include nosuch'
 
 doc <<'EOF'
 {% include build %}
 EOF
 run build -d
 check_has 'a document that includes itself is stopped' 1 \
-          'buildenv: inclusion is too deep'
+    'buildenv: inclusion is too deep'
 
 doc <<'EOF'
 {% frobnicate %}
@@ -473,7 +462,6 @@ The value is ${BUILDENV_TEST_UNSET}.
 EOF
 run build -d
 check_has 'an unset variable is an error' 1 'unbound variable'
-
 
 #
 # Executing the commands
@@ -530,7 +518,6 @@ EOF
 run build -y
 check 'a document without a command does nothing' 0 <<'EOF'
 EOF
-
 
 #
 # The interactive mode
@@ -628,7 +615,6 @@ two
 three
 EOF
 
-
 #
 # The command line
 #
@@ -706,7 +692,7 @@ EOF
 doc extract <<'EOF'
   $ echo extracting
 EOF
-: > "${workdir}/in-the-way"
+: >"${workdir}/in-the-way"
 answer n
 run extract -y
 # The prompt of "read -p" is written only to a terminal, and the tests give
@@ -719,7 +705,7 @@ EOF
 doc extract <<'EOF'
   $ echo extracting
 EOF
-: > "${workdir}/in-the-way"
+: >"${workdir}/in-the-way"
 run extract -f -y
 check 'extract does not ask with -f' 0 <<'EOF'
 ==> echo extracting
@@ -733,7 +719,6 @@ run build -f
 check 'a command that is not extract has no -f' 1 <<EOF
 usage: ${CMD} build [-Ddhimpxy]
 EOF
-
 
 #
 # Asking once
@@ -764,7 +749,6 @@ Build commands:
   $ printf '%s\n' one
   > printf '%s\n' two
 EOF
-
 
 printf '\n'
 if [[ ${nfailures} -eq 0 ]]; then
