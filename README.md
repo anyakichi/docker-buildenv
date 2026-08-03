@@ -301,6 +301,19 @@ The rules are:
   spaces at the end of it are left alone.
 - Every blank line on that side is removed, however many there are.
 
+## Tests
+
+`tests/run.sh` runs buildenv over documents written for the occasion and
+compares the output and the exit status with what is expected. It needs
+nothing but bash and awk, and writes nothing outside its own temporary
+directory:
+
+```console
+$ ./tests/run.sh
+```
+
+It prints a line for every test and exits non-zero if any of them failed.
+
 ## Examples
 
 - <https://github.com/anyakichi/docker-yocto-builder>
