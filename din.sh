@@ -38,9 +38,10 @@ din() {
     fi
 
     if [[ $DIN_CMD == podman ]]; then
-        podman run \
-            --user 0:0 --userns "keep-id:uid=$(id -u),gid=$(id -g)" \
-            "${opts[@]}" "$@"
+        if ((EUID != 0)); then
+            opts+=(--user 0:0 --userns "keep-id:uid=$(id -u),gid=$(id -g)")
+        fi
+        podman run "${opts[@]}" "$@"
     else
         docker run "${opts[@]}" "$@"
     fi
