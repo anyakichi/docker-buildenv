@@ -203,8 +203,10 @@ expand_vars()
 # line indented more deeply is a line of the shell, not of ours, so a wrapped
 # pipeline is left to the trailing backslash as before.
 #
-# A command line is held until the next line is read, because a continuation
-# line takes precedence over a trailing backslash.
+# Every line is held until the next one is read, because a continuation line
+# takes precedence over a trailing backslash.  A "> " line is held just as a
+# command line is, so that it too joins the deeper-indented line that follows
+# its trailing backslash instead of losing it.
 select_commands()
 {
     local epat=${1:-'\$'} input
@@ -219,6 +221,15 @@ select_commands()
 	function cont_text(s) {    # the text after the mark and its space
 	    return substr(s, tlen + 2)
 	}
+	function hold(s, c) {
+	    cmd = s
+	    first = c
+	    held = 1
+	}
+	function emit() {    # leave the trailing backslash, if any, to bash
+	    print (first ? mark cmd : cmd)
+	    held = 0
+	}
 	BEGIN {
 	    cpat = "^[ \t]*(" ENVIRON["EPAT"] ")[ \t]+[^ \t]"
 	    ppat = "^[ \t]*(" ENVIRON["EPAT"] ")[ \t]+"
@@ -227,42 +238,32 @@ select_commands()
 	{
 	    if (held) {
 	        if (cont_p($0)) {
-	            print mark cmd    # leave the trailing backslash, if any, to bash
-	            held = 0
-	            cont = 1
+	            emit()
+	            hold(cont_text($0), 0)
+	            next
 	        } else if (cmd ~ /\\$/) {
 	            sub(/[ \t]*\\$/, "", cmd)
 	            line = $0
 	            sub(/^[ \t]*/, "", line)
 	            cmd = cmd " " line
 	            next
-	        } else {
-	            print mark cmd
-	            held = 0
-	            cont = 0
 	        }
+	        emit()
 	    }
-
-	    if (cont && cont_p($0)) {
-	        print cont_text($0)
-	        next
-	    }
-
-	    cont = 0
 
 	    if ($0 ~ cpat) {
 	        tstr = $0
 	        sub(/[^ \t].*$/, "", tstr)    # the indentation of the prompt
 	        tstr = tstr ">"
 	        tlen = length(tstr)
-	        cmd = $0
-	        sub(ppat, "", cmd)
-	        held = 1
+	        line = $0
+	        sub(ppat, "", line)
+	        hold(line, 1)
 	    }
 	}
 	END {
 	    if (held) {
-	        print mark cmd
+	        emit()
 	    }
 	}
     '
@@ -418,6 +419,7 @@ print_manual()
 	}
 	{
 	    if (cont_p($0)) {
+	        prev = $0    # its trailing backslash keeps the command open too
 	        print ind substr($0, tlen + 2)
 	        next
 	    }
