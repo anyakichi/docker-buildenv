@@ -1,0 +1,65 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    # buildenv reads a document with awk, and it runs in whatever container
+    # the software is built in, where the awk is not the one we wrote it
+    # with: mawk on Debian and Ubuntu, busybox awk on Alpine.  Run the tests
+    # with each of them, so that a construct only one of them takes is found
+    # here rather than in someone else's build.
+    name: tests (${{ matrix.awk }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        awk:
+          - mawk
+          - gawk
+          - original-awk
+          - busybox
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use ${{ matrix.awk }} as awk
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.awk }}
+          if [ ${{ matrix.awk }} = busybox ]; then
+              # busybox has no alternative of its own; put a link to it in
+              # front of the PATH instead.
+              mkdir -p "${HOME}/bin"
+              ln -sf /usr/bin/busybox "${HOME}/bin/awk"
+              echo "${HOME}/bin" >> "${GITHUB_PATH}"
+          else
+              sudo update-alternatives --set awk /usr/bin/${{ matrix.awk }}
+          fi
+
+      - name: Show the awk in use
+        run: awk -W version 2>&1 | head -1 || awk --version 2>&1 | head -1
+
+      - name: Run the tests
+        run: ./tests/run.sh
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The two remaining findings are informational: buildenv sources a
+      # configuration file that is not in the repository, and it lists a
+      # directory whose names it chooses itself.
+      - name: Run shellcheck
+        run: |
+          shellcheck --version || {
+              sudo apt-get update
+              sudo apt-get install -y shellcheck
+          }
+          shellcheck -S warning buildenv.sh din.sh entrypoint.sh tests/run.sh
