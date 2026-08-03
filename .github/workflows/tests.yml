@@ -48,6 +48,18 @@ jobs:
       - name: Run the tests
         run: ./tests/run.sh
 
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # -d writes what it would change and stops with an error, so the check
+      # says which file is out of shape and how.
+      - name: Check the formatting with shfmt
+        uses: docker://mvdan/shfmt:v3
+        with:
+          args: -i 4 -s -d buildenv.sh din.sh entrypoint.sh tests/run.sh
+
   shellcheck:
     runs-on: ubuntu-latest
     steps:
