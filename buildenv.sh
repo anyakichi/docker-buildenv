@@ -62,6 +62,12 @@ dotcmd_p()
 # A directive leaves nothing behind, hence it can be put anywhere, even in the
 # middle of the continuation lines of a command.
 #
+# A "-" on either side of a directive, written right against the "{%" or the
+# "%}", removes the blank lines that stand on that side, so that a document can
+# be written with the blocks spaced out and still be printed tight.  It is
+# resolved here as well, hence the blank lines are held until it is known
+# whether the next line is a directive that takes them.
+#
 # An inclusion is a command of the script, so that the name of the document is
 # expanded by the shell as everything else is, and buildenv itself expands the
 # included document in turn.  Only an inclusion counts up the depth, which
@@ -108,14 +114,38 @@ expand_vars()
 	        text = 0
 	    }
 	}
+	function blank_p(s) {
+	    return s ~ /^[ \t]*$/
+	}
+	# Print the blank lines held so far, now that they are not taken.
+	function blanks_flush(   i) {
+	    for (i = 1; i <= nblank; i++) {
+	        text_on()
+	        print esc(blanks[i])
+	    }
+	    nblank = 0
+	}
 	BEGIN {
 	    # The delimiter must be a string that never appears in a document.
 	    delim = "__BUILDENV_EXPAND_EOF__"
 	}
 	/^[ \t]*\{%.*%\}[ \t]*$/ {
 	    d = $0
-	    sub(/^[ \t]*\{%[ \t]*/, "", d)
-	    sub(/[ \t]*%\}[ \t]*$/, "", d)
+	    lstrip = sub(/^[ \t]*\{%-[ \t]*/, "", d)
+	    if (!lstrip) {
+	        sub(/^[ \t]*\{%[ \t]*/, "", d)
+	    }
+	    rstrip = sub(/[ \t]*-%\}[ \t]*$/, "", d)
+	    if (!rstrip) {
+	        sub(/[ \t]*%\}[ \t]*$/, "", d)
+	    }
+
+	    if (lstrip) {
+	        nblank = 0
+	    } else {
+	        blanks_flush()
+	    }
+	    skip = rstrip
 
 	    text_off()
 
@@ -141,11 +171,21 @@ expand_vars()
 	    next
 	}
 	{
+	    if (blank_p($0)) {
+	        if (!skip) {
+	            blanks[++nblank] = $0
+	        }
+	        next
+	    }
+
+	    skip = 0
+	    blanks_flush()
 	    text_on()
 	    print esc($0)
 	}
 	END {
 	    if (!err) {
+	        blanks_flush()
 	        text_off()
 	    }
 	}
