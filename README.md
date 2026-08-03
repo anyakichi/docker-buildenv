@@ -238,6 +238,69 @@ A document that cannot be included, because there is no such document
 or because it has an error in it, stops the whole command. So does a
 document that includes itself, after a few rounds.
 
+### Blank lines
+
+A directive leaves nothing behind, but the blank lines around it are
+text and are left as they are written. A block whose contents are
+spaced out for the sake of the source is therefore printed with the
+spacing in it:
+
+```
+Prepare the sources.
+
+{% if "${CROSS_IMAGE}" %}
+
+Extract the rootfs of ${CROSS_IMAGE} to build against it.
+
+{% endif %}
+
+Build the firmware.
+```
+
+A "-" written right against the "{%" or the "%}" removes the blank
+lines on that side: `{%- if %}` removes the ones before the directive
+and `{% if -%}` the ones after it. A "-" at the end of both the opening
+and the closing directive therefore removes the spacing inside a block
+and keeps the one blank line that separates it from the text around it,
+whether the block is printed or not:
+
+```
+Prepare the sources.
+
+{% if "${CROSS_IMAGE}" -%}
+
+Extract the rootfs of ${CROSS_IMAGE} to build against it.
+
+{% endif -%}
+
+Build the firmware.
+```
+
+This prints one blank line between the paragraphs when CROSS_IMAGE is
+empty, and the middle paragraph with a blank line on each side when it
+is not. `{% elif %}` and `{% else %}` are marked the same way, so that
+every branch is printed alike. The two sides are independent, so a
+block can be tightened at one end only, or against the text around it
+as well.
+
+The marks work on an `{% include %}` as well, where they remove the
+blank lines around the directive itself. They do not reach into the
+included document, which is expanded as a unit of its own, so the blank
+lines at the beginning and at the end of it are for that document to
+write.
+
+The rules are:
+
+- The "-" must stand right against the "{%" or the "%}", so an
+  expression that begins with a "-" is written as it is, as in
+  `{% if -z "${CROSS_CONTAINER:-}" %}`, and one that ends with a "-" is
+  written with a space before the "%}", as in
+  `{% if "${MY_TAG}" == *- %}`.
+- Only blank lines, that is lines that are empty or hold nothing but
+  spaces and tabs, are removed. The indentation of a line and the
+  spaces at the end of it are left alone.
+- Every blank line on that side is removed, however many there are.
+
 ## Examples
 
 - <https://github.com/anyakichi/docker-yocto-builder>
