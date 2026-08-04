@@ -333,8 +333,12 @@ exec_commands() {
 
     /bin/bash <(echo "${input}" |
         MARK="${MARK}" ASK="${ask}" ASK_FUNC="$(ask_func)" awk '
+	# The separator is written as a bracket expression rather than as the
+	# quote itself, because a one-character separator sends original-awk
+	# down a path that breaks the string on a newline as well, and a
+	# command held for the prompt is several lines joined by one.
 	function shquote(s,   n, arr, i, r) {
-	    n = split(s, arr, q)
+	    n = split(s, arr, "[" q "]")
 	    r = arr[1]
 	    for (i = 2; i <= n; i++) {
 	        r = r q "\\" q q arr[i]
