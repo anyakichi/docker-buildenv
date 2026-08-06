@@ -28,12 +28,19 @@ extract, setup, and build are commands prepared by buildenv.
 - **setup**: Setup build environment.
 - **build**: Build software.
 
+setup is of a different kind: a build environment is set up by
+exporting variables, which a command run in a shell of its own cannot
+do for the shell that called it. Its alias is therefore
+`. <(buildenv setup)`, and buildenv only prints the commands, leaving
+the calling shell to run them. DOTCMDS in /etc/buildenv.conf says which
+commands are of this kind, and the images choose it.
+
 A command shows what it is about to do and asks once, then runs it all.
 With -i it asks for every command instead, so that you can follow the
 manual step by step:
 
 ```console
-builder@build:/build$ setup -i
+builder@build:/build$ build -i
   $ cat > conf/auto.conf <<EOF
   > MACHINE = "qemux86-64"
   > EOF
@@ -45,6 +52,9 @@ Execute? [Y/n/a/q/?] a
 y executes the command, n skips it, a executes it and all that follow
 without asking again, and q stops there. The commands share one shell,
 so a command still sees what the commands before it have done.
+
+There is nothing for -i or -y to execute in a command whose output is
+sourced, and both are ignored there; -m still prints its manual.
 
 Normally, extract is required only once, so you can use the container
 after the second:
