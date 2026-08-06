@@ -158,6 +158,32 @@ with the value in the container by buildenv. Escape a variable as
 rules apply, that is, it is expanded on execution with an unquoted
 delimiter and written to the file as is with a quoted one.
 
+A command substitution, $(...), is run by buildenv at the same time,
+and what stands inside it is left as it is written: the shell parses it
+as a command of its own, so a backslash there belongs to that command
+and is not to be escaped. A substitution can therefore write out the
+commands themselves, prompts and all:
+
+```
+$(ls conf/*.sample | sed -E 's,(.*)\.sample,\$ cp \1.sample \1,')
+```
+
+Here \1 reaches sed as it is written, while \$ is the escape above,
+which leaves a "$ " at the head of every line produced, so that each of
+them becomes a command of the document.
+
+A substitution may be written over several lines. While it is open,
+every line of the document is a line of it, so a blank line or a line
+that looks like a directive is left to the command too:
+
+```
+$(
+    ls conf/*.sample |
+
+    sed -E 's,(.*)\.sample,\$ cp \1.sample \1,'
+)
+```
+
 Note that the commands are executed with errexit enabled, so the
 execution stops on the first command that fails, including one inside
 a loop.
