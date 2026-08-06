@@ -76,12 +76,47 @@ expand_vars() {
     awk '
 	# Escape a line so that the here-document expands the variables and the
 	# command substitutions in it, and nothing else.
+	#
+	# What stands inside a command substitution is copied out as it is
+	# written, because the shell parses it again as a command of its own:
+	# a backslash there belongs to that command -- to sed, to printf -- and
+	# one doubled here would reach it doubled.  The end of it is found by
+	# counting the parentheses while stepping over the quotes, since a
+	# parenthesis inside a quote is text and closes nothing.
+	#
+	# The count is kept between the lines, in cdepth and cquote, so that a
+	# substitution written over several lines is copied out whole.  While it
+	# stands open every line is one of it, hence a line that would otherwise
+	# be a directive or be held as a blank one is text like the rest.
 	function esc(s,   i, c, n, r) {
 	    r = ""
 	    n = length(s)
 	    for (i = 1; i <= n; i++) {
 	        c = substr(s, i, 1)
-	        if (c == "\\") {
+	        if (cdepth > 0) {
+	            r = r c
+	            if (cquote != "") {
+	                if (c == cquote) {
+	                    cquote = ""
+	                } else if (c == "\\" && cquote != sq) {
+	                    i++
+	                    r = r substr(s, i, 1)
+	                }
+	            } else if (c == sq || c == "\"") {
+	                cquote = c
+	            } else if (c == "\\") {
+	                i++
+	                r = r substr(s, i, 1)
+	            } else if (c == "(") {
+	                cdepth++
+	            } else if (c == ")") {
+	                cdepth--
+	            }
+	        } else if (c == "$" && substr(s, i + 1, 1) == "(") {
+	            r = r "$("
+	            cdepth = 1
+	            i++
+	        } else if (c == "\\") {
 	            if (substr(s, i + 1, 1) == "$") {
 	                r = r "\\$"    # leave the dollar for the commands
 	                i++
@@ -122,8 +157,9 @@ expand_vars() {
 	BEGIN {
 	    # The delimiter must be a string that never appears in a document.
 	    delim = "__BUILDENV_EXPAND_EOF__"
+	    sq = sprintf("%c", 39)    # the awk program itself is single quoted
 	}
-	/^[ \t]*\{%.*%\}[ \t]*$/ {
+	cdepth == 0 && /^[ \t]*\{%.*%\}[ \t]*$/ {
 	    d = $0
 	    lstrip = sub(/^[ \t]*\{%-[ \t]*/, "", d)
 	    if (!lstrip) {
@@ -165,7 +201,7 @@ expand_vars() {
 	    next
 	}
 	{
-	    if (blank_p($0)) {
+	    if (cdepth == 0 && blank_p($0)) {
 	        if (!skip) {
 	            blanks[++nblank] = $0
 	        }

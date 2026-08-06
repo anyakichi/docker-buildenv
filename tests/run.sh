@@ -332,6 +332,47 @@ A backslash \ and a backtick ` are left as they are.
 EOF
 
 doc <<'EOF'
+$(printf '%s\n' 'a b' | sed 's/\(a\) \(b\)/\2 \1/')
+EOF
+run build -d
+check 'a backslash in a command substitution is left to the command' 0 <<'EOF'
+b a
+EOF
+
+doc <<'EOF'
+$(
+    printf '%s\n' 'a b' |
+
+    sed 's/\(a\) \(b\)/\2 \1/'
+)
+EOF
+run build -d
+check 'a command substitution can be written over several lines' 0 <<'EOF'
+b a
+EOF
+
+doc <<'EOF'
+$(cat <<'X'
+{% if 1 == 1 %}
+X
+)
+EOF
+run build -d
+check 'a directive inside a substitution is text, not a directive' 0 <<'EOF'
+{% if 1 == 1 %}
+EOF
+
+doc <<'EOF'
+$(echo '(') and a backslash \
+still ends the line.
+EOF
+run build -d
+check 'a parenthesis in a quote does not close a substitution' 0 <<'EOF'
+( and a backslash \
+still ends the line.
+EOF
+
+doc <<'EOF'
 The raw document keeps ${BUILDENV_TEST_VAR} as it is written.
 EOF
 run build -D
