@@ -85,6 +85,89 @@ filesystem, set the driver in `~/.config/containers/storage.conf`:
 driver = "btrfs"
 ```
 
+## The build cache
+
+Nothing of a container survives it, so a compiler cache in one is a
+cache thrown away. If `~/.cache/din` exists (`$XDG_CACHE_HOME` is
+honoured), din mounts it at `/cache` and points CCACHE_DIR and
+SCCACHE_DIR into it, and the builds of every directory share it. It is
+not made for you; make it when you want it:
+
+```console
+$ mkdir -p ~/.cache/din
+```
+
+Without it there is nowhere for a cache to go, and din sets
+CCACHE_DISABLE=1 rather than let ccache fill the container with one.
+
+The directory used to be `~/.cache/buildenv`, which din wrote there and
+not under `$XDG_CACHE_HOME`, so that is where the old one is looked for.
+It is still used when it is the one that is there, and din says so once
+each run; rename it to stop being told:
+
+```console
+$ mv ~/.cache/buildenv ~/.cache/din
+```
+
+## Options for din
+
+din gives docker the options a build needs, and the files of
+`~/.config/din` say what to add to them (`$XDG_CONFIG_HOME` is honoured).
+There is a file for each of the DIN_OPTS of the environment: `config` for
+the options that apply to either command, `config_docker` and
+`config_podman` for the ones only one of them takes.
+
+A file is a list of options, one command line to a line:
+
+```sh
+# ~/.config/din/config
+--network host
+-v "${HOME}/.ssh:/home/builder/.ssh:ro"
+```
+
+```sh
+# ~/.config/din/config_podman
+--security-opt label=disable
+```
+
+A line is expanded by the shell you run din from, the way that shell
+expands a command line: a variable is expanded as it is written, an
+argument with a space in it is quoted as it would be anywhere else and
+stays one argument, and a `#` begins a comment.
+
+The added options come after the ones din itself gives and before the
+image name, so one of them can replace what din chose, as both docker
+and podman take the last of a repeated option:
+
+```sh
+# ~/.config/din/config
+-h builder    # a hostname instead of the directory's name
+```
+
+### Options for one directory
+
+The environment says the same thing in the same language, in DIN_OPTS,
+DIN_DOCKER_OPTS and DIN_PODMAN_OPTS, and is read after the files, so that
+what a directory sets has the last word:
+
+```console
+$ DIN_OPTS='-v "/opt/tool chain:/opt/toolchain:ro"' din anyakichi/yocto-builder
+```
+
+A variable holds as many lines as a file does, and a line means the same
+in either place.
+
+din itself reads nothing out of the tree it mounts, so there is no file
+to put in a source tree, and nothing of a source tree runs on your host.
+A directory that wants options of its own gets them the way it gets the
+rest of its environment. With [direnv](https://direnv.net), that is an
+`.envrc`:
+
+```bash
+# .envrc
+export DIN_OPTS='-v /opt/toolchain:/opt/toolchain:ro --shm-size 2g'
+```
+
 ## Developing and Building
 
 docker-buildenv is just the environment for building, not editing. We
