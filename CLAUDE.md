@@ -10,6 +10,11 @@ into a container.
 
 - `buildenv.sh` — installed as `buildenv` inside a builder image. Reads
   *documents* from `/etc/buildenv.d/` and executes the commands in them.
+  bash on purpose, unlike the two below: the image is the consumer's to
+  build and can be told to have a bash, and the documents are written for
+  one — a `{% if %}` condition is a `[[ ]]`. Making it POSIX, or letting the
+  image name the shell the documents run under, was weighed and dropped;
+  that shell could only be a worse one than the image already has.
 - `din.sh` — copied to the host's PATH as `din`. Runs a container with the
   current directory bind-mounted at `/build`. POSIX sh, since it runs on
   whatever host the builder is driven from. What to add to the options it
