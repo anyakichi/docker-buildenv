@@ -18,8 +18,9 @@ into a container.
   environment, a line of either being expanded as a command line; it reads
   nothing out of the mounted tree, on purpose, so nothing of a source tree
   runs on the host.
-- `entrypoint.sh` — the image's entrypoint. Aligns the builder user's
-  uid/gid with the owner of the mounted directory, then drops privileges via
+- `entrypoint.sh` — the image's entrypoint. POSIX sh, since it runs on
+  whatever shell the image has. Aligns the builder user's uid/gid with the
+  owner of the mounted directory, then drops privileges via
   gosu/setpriv/sudo.
 - `buildenv.conf` — sourced from `/etc/buildenv.conf`; documents `ALIASES`
   and `DOTCMDS`.

@@ -1,7 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
 set -o nounset
-set -o pipefail
 
 BUILD_USER="${BUILD_USER:=builder}"
 BUILD_GROUP="${BUILD_GROUP:=builder}"
@@ -31,8 +30,8 @@ if [ "$uid" -ne 0 ]; then
 fi
 
 if [ $# -ne 0 ]; then
-    export USER=${BUILD_USER}
-    export HOME=/home/${BUILD_USER}
+    export USER="${BUILD_USER}"
+    export HOME="/home/${BUILD_USER}"
 
     if buildenv "$1" -h >/dev/null 2>&1; then
         suexec buildenv "$@"
