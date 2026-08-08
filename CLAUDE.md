@@ -11,7 +11,13 @@ into a container.
 - `buildenv.sh` — installed as `buildenv` inside a builder image. Reads
   *documents* from `/etc/buildenv.d/` and executes the commands in them.
 - `din.sh` — copied to the host's PATH as `din`. Runs a container with the
-  current directory bind-mounted at `/build`.
+  current directory bind-mounted at `/build`. POSIX sh, since it runs on
+  whatever host the builder is driven from. What to add to the options it
+  gives docker comes from the files of `~/.config/din` (`config`,
+  `config_docker`, `config_podman`) and from the `DIN_OPTS` family in the
+  environment, a line of either being expanded as a command line; it reads
+  nothing out of the mounted tree, on purpose, so nothing of a source tree
+  runs on the host.
 - `entrypoint.sh` — the image's entrypoint. Aligns the builder user's
   uid/gid with the owner of the mounted directory, then drops privileges via
   gosu/setpriv/sudo.
@@ -85,11 +91,12 @@ there.
 
 - Commit subjects are `<area>: <Imperative sentence>` with the area being the
   script or topic touched (`buildenv:`, `din:`, `tests:`, `ci:`, `README:`).
-  A change to `buildenv.sh` that alters behaviour is followed by a separate
-  `README:` commit describing it.
 - Comments are prose in full sentences, placed above a function to explain
   *why* the thing is shaped that way. Match that register; the file has a
   deliberate voice.
 - New behaviour in `buildenv.sh` needs a case in `tests/run.sh` (a `doc`
   heredoc, a `run`, and a `check` with the expected output and status) and a
-  section in `README.md`.
+  section in `README.md`. The suite runs documents through `buildenv.sh` and
+  has nothing for the other scripts; a change to `din.sh` gets its section in
+  `README.md` and is tried by hand against a `docker` on PATH that only
+  prints its arguments.
