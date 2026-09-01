@@ -306,12 +306,15 @@ select_commands() {
 # terminal, the standard input is used after all, and the end of it is an error,
 # not a quit, since the commands left unanswered are the ones left unexecuted:
 # a run that answers nothing must not look like a run that succeeded.
+#
+# Whichever it is, it is opened once and kept on a descriptor of its own.  A
+# redirection written at the read would open it again for every question, and
+# a file opened again starts over: the standard input redirected from a file of
+# answers would give its first line to every question, and never reach the end.
 ask_func() {
     cat <<'__BUILDENV_ASK__'
-__buildenv_tty=/dev/stdin
-
-if { : < /dev/tty; } 2>/dev/null; then
-    __buildenv_tty=/dev/tty
+if ! { exec {__buildenv_fd}</dev/tty; } 2>/dev/null; then
+    exec {__buildenv_fd}<&0
 fi
 
 __buildenv_ask()
@@ -326,7 +329,7 @@ __buildenv_ask()
     printf '%s\n' "$1" | sed -e '1s/^/  $ /' -e '1!s/^/  > /' >&2
 
     while :; do
-        if ! read -r -p 'Execute? [Y/n/a/q/?] ' reply < "${__buildenv_tty}" \
+        if ! read -r -u "${__buildenv_fd}" -p 'Execute? [Y/n/a/q/?] ' reply \
            && [[ ! ${reply:-} ]]; then
             echo >&2
             echo "buildenv: no answer to read; the input has ended" >&2

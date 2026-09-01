@@ -53,6 +53,11 @@ y executes the command, n skips it, a executes it and all that follow
 without asking again, and q stops there. The commands share one shell,
 so a command still sees what the commands before it have done.
 
+The question is asked on the terminal, so a command that reads its
+standard input gets that input and not the answers. Where there is no
+terminal the answers are read from the standard input after all, one
+line each, and running out of them is an error, not a quit.
+
 There is nothing for -i or -y to execute in a command whose output is
 sourced, and both are ignored there; -m still prints its manual.
 

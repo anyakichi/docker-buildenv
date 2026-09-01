@@ -33,6 +33,7 @@ nfailures=0
 confdir=''
 workdir=''
 input=''
+input_file=''
 out=''
 status=0
 
@@ -68,12 +69,28 @@ answer() {
     done
 }
 
+# Set the answers as answer does, but hand them over as a file rather than a
+# pipe, since a file is read differently: it has a position, and one opened
+# again starts over.
+answer_file() {
+    answer "$@"
+    input_file="${tmpdir}/answers"
+    printf '%s' "${input}" >"${input_file}"
+}
+
 # Run buildenv over the last document.
 run() {
-    out="$(cd "${workdir}" && printf '%s' "${input}" |
-        CONFDIR="${confdir}" detached "${BUILDENV}" "$@" 2>&1)"
+    if [[ ${input_file} ]]; then
+        out="$(cd "${workdir}" &&
+            CONFDIR="${confdir}" detached "${BUILDENV}" "$@" \
+                <"${input_file}" 2>&1)"
+    else
+        out="$(cd "${workdir}" && printf '%s' "${input}" |
+            CONFDIR="${confdir}" detached "${BUILDENV}" "$@" 2>&1)"
+    fi
     status=$?
     input=''
+    input_file=''
 }
 
 fail() {
@@ -637,6 +654,14 @@ one
   $ echo two
 
 buildenv: no answer to read; the input has ended
+EOF
+
+answer_file n y
+run build -i
+check 'the answers are read on from a file, not its first line over again' 0 <<'EOF'
+  $ echo one
+  $ echo two
+two
 EOF
 
 doc <<'EOF'
