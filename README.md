@@ -114,6 +114,24 @@ each run; rename it to stop being told:
 $ mv ~/.cache/buildenv ~/.cache/din
 ```
 
+## What din gives the container
+
+Besides the current directory at `/build`, which is also the working
+directory, and the cache above, din passes on what a build in the
+container is likely to want from the host:
+
+- the directory's name as the hostname, so that a prompt says which
+  build it is in;
+- TERM, http_proxy, https_proxy, ftp_proxy and no_proxy, those that are
+  set;
+- `BASH_ENV=/build/.bashrc`, so that a non-interactive bash in the
+  container -- one run as `din <image> make`, say, or buildenv itself
+  -- reads that file from the tree first, if the tree has one. The
+  entrypoint drops privileges before any bash reads it.
+
+The container's `-i` and `--rm` are always given, and `-t` when the
+standard input is a terminal.
+
 ## Options for din
 
 din gives docker the options a build needs, and the files of
@@ -285,6 +303,22 @@ $(
 Note that the commands are executed with errexit enabled, so the
 execution stops on the first command that fails, including one inside
 a loop.
+
+### Optional commands
+
+A command whose prompt is "?" instead of "$" is left out unless the
+command is run with -x, so a manual can hold the steps that are not
+for every build -- a clean, a fetch that is only needed once -- next to
+the ones that are:
+
+```
+$ bitbake core-image-minimal
+? bitbake -c cleansstate core-image-minimal
+```
+
+Everything else is the same for the two prompts: a "?" command is
+continued with "> " lines as a "$" command is, and the manual of -m
+drops the one prompt as it drops the other.
 
 The prompts and the continuation marks are the notation of buildenv,
 not of the shell, so `buildenv <command> -m` prints the document as a
