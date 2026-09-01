@@ -13,6 +13,12 @@
 #
 # The tests read /etc/buildenv.conf if the host has one, because buildenv
 # sources it before anything else can be said about it.
+#
+# The interactive mode asks the terminal when there is one, and the answers of
+# these tests come over the standard input, so buildenv is run without a
+# controlling terminal, which is what setsid does.  Where there is no setsid,
+# buildenv is run as it is, which is right wherever the tests are not run from
+# a terminal, as in CI.
 
 set -o nounset
 
@@ -29,6 +35,12 @@ workdir=''
 input=''
 out=''
 status=0
+
+if command -v setsid >/dev/null 2>&1; then
+    detached() { setsid -w "$@"; }
+else
+    detached() { "$@"; }
+fi
 
 # Write a document, read from the standard input, into a fresh CONFDIR.  The
 # argument is the stem of the file, hence the name of the command, and
@@ -59,7 +71,7 @@ answer() {
 # Run buildenv over the last document.
 run() {
     out="$(cd "${workdir}" && printf '%s' "${input}" |
-        CONFDIR="${confdir}" "${BUILDENV}" "$@" 2>&1)"
+        CONFDIR="${confdir}" detached "${BUILDENV}" "$@" 2>&1)"
     status=$?
     input=''
 }

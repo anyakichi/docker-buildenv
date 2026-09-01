@@ -424,7 +424,9 @@ The rules are:
 
 `tests/run.sh` runs buildenv over documents written for the occasion and
 compares the output and the exit status with what is expected. It needs
-nothing but bash and awk, and writes nothing outside its own temporary
+bash and awk, and setsid when it is run from a terminal, since the
+interactive mode would otherwise ask the terminal rather than take the
+answers the tests give it. It writes nothing outside its own temporary
 directory:
 
 ```console
