@@ -439,11 +439,32 @@ print_commands() {
 # else is left as it is written.  A line is a continuation line here as well
 # only when its ">" stands in the column of the prompt above, so that a quote
 # in the text is left alone.
+#
+# The blank lines at the beginning and at the end of the manual are dropped.
+# They are where an inclusion shows whether it printed anything: a document
+# that begins with "{% include setup %}" and a blank line is either the setup
+# and the blank line and the rest, or the blank line and the rest, and only the
+# manual can tell which.  The lines are held until the next one is read, since
+# a blank line is the last one only when nothing follows it.
 print_manual() {
     EPAT='\$|\?' awk '
 	function cont_p(s) {
 	    return open && tlen > 0 && substr(s, 1, tlen) == tstr &&
 	           (length(s) == tlen || substr(s, tlen + 1, 1) == " ")
+	}
+	function emit(s,   i) {
+	    if (s ~ /^[ \t]*$/) {
+	        if (started) {
+	            blanks[++nblank] = s
+	        }
+	        return
+	    }
+	    for (i = 1; i <= nblank; i++) {
+	        print blanks[i]
+	    }
+	    nblank = 0
+	    started = 1
+	    print s
 	}
 	BEGIN {
 	    cpat = "^[ \t]*(" ENVIRON["EPAT"] ")[ \t]+[^ \t]"
@@ -452,7 +473,7 @@ print_manual() {
 	{
 	    if (cont_p($0)) {
 	        prev = $0    # its trailing backslash keeps the command open too
-	        print ind substr($0, tlen + 2)
+	        emit(ind substr($0, tlen + 2))
 	        next
 	    }
 
@@ -471,7 +492,7 @@ print_manual() {
 	    }
 
 	    prev = $0
-	    print line
+	    emit(line)
 	}
     '
 }

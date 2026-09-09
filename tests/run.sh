@@ -322,6 +322,39 @@ check 'the manual leaves a ">" in the text alone' 0 <<'EOF'
 The > in this line is text, not a continuation.
 EOF
 
+doc <<'EOF'
+
+
+Text after blank lines.
+EOF
+run build -m
+check 'the manual drops the blank lines at the beginning' 0 <<'EOF'
+Text after blank lines.
+EOF
+
+doc <<'EOF'
+{% include setup %}
+
+Build it.
+EOF
+doc_add setup <<'EOF'
+{% if ! -e .setup-done -%}
+
+Set it up first.
+{%- endif %}
+EOF
+run build -m
+check 'the manual keeps the blank line after an include that prints' 0 <<'EOF'
+Set it up first.
+
+Build it.
+EOF
+touch "${workdir}/.setup-done"
+run build -m
+check 'the manual drops the blank line after an include that prints nothing' 0 <<'EOF'
+Build it.
+EOF
+
 #
 # Expanding the variables
 #

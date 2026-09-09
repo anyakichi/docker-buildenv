@@ -323,8 +323,11 @@ drops the one prompt as it drops the other.
 The prompts and the continuation marks are the notation of buildenv,
 not of the shell, so `buildenv <command> -m` prints the document as a
 manual with them removed, leaving the commands ready to be copied out
-of the text. `-d` keeps them and prints the document as it is written
-with the variables expanded.
+of the text. The blank lines at the beginning and at the end of the
+manual are dropped as well, so that a document can be spaced out around
+an inclusion that may print nothing; see "Blank lines" below. `-d`
+keeps them all and prints the document as it is written with the
+variables expanded.
 
 ### Conditions
 
@@ -446,6 +449,23 @@ blank lines around the directive itself. They do not reach into the
 included document, which is expanded as a unit of its own, so the blank
 lines at the beginning and at the end of it are for that document to
 write.
+
+The manual of `-m` drops the blank lines at the beginning and at the end
+of what it prints, which is where an inclusion that may print nothing
+would otherwise leave a mark. A build document that starts with the
+setup, if it has not been done yet, is written with a plain
+`{% include setup %}` and a blank line after it:
+
+```
+{% include setup %}
+
+Build the firmware.
+```
+
+The blank line separates the two when the setup is printed, and is the
+first line of the manual, hence dropped, when it is not. The setup
+document itself needs no blank line at its end for this, and its own
+manual is printed without one either way.
 
 The rules are:
 
