@@ -479,6 +479,46 @@ The rules are:
   spaces at the end of it are left alone.
 - Every blank line on that side is removed, however many there are.
 
+### Best practices
+
+The build document includes the setup, so that build alone takes a
+fresh shell from the extracted sources to the built software, and the
+setup document guards itself with a variable that its own commands
+export, so that the setup is not done twice in a shell that has done it
+already:
+
+```
+{% if -z "${BUILDDIR:-}" %}
+Set up the build environment.
+
+$ . poky/oe-init-build-env build
+{% endif %}
+```
+
+```
+{% include setup %}
+
+Build the firmware.
+
+$ bitbake core-image-minimal
+```
+
+The setup stands in a document of its own because it is what
+`. <(buildenv setup)` gives the shell of the user; the commands of a
+build run in a shell of their own, which has to be set up in turn, and
+the inclusion is what sets it up.
+
+The manuals of extract and build, joined with a blank line, are then
+the whole procedure, from an empty directory to the built software:
+
+```console
+builder@build:/build$ { extract -m; echo; build -m; } > BUILD.md
+```
+
+The condition of the setup is resolved when the manual is printed, as
+every directive is, so the manual is written from a shell that has not
+been set up, or the setup is left out of it.
+
 ## Tests
 
 `tests/run.sh` runs buildenv over documents written for the occasion and
