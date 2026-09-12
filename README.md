@@ -132,6 +132,20 @@ container is likely to want from the host:
 The container's `-i` and `--rm` are always given, and `-t` when the
 standard input is a terminal.
 
+### The builder and the mounted directory
+
+The image's entrypoint gives the builder the uid and the gid of the
+owner of `/build` before it drops privileges, so that what a build
+writes there is yours. The files of the builder's home directory are
+renumbered along, so that the image's own dotfiles and caches stay the
+builder's.
+
+That renumbering stays on the file system of the home directory, so a
+directory of the host mounted under it -- `~/.ssh` at
+`/home/builder/.ssh`, say -- is left as it came, whatever its files are
+owned by, and may be mounted read-only. Only the files the image put in
+the home change owner.
+
 ## Options for din
 
 din gives docker the options a build needs, and the files of
